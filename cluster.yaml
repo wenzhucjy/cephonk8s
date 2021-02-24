@@ -11,6 +11,7 @@
 apiVersion: ceph.rook.io/v1
 kind: CephCluster
 metadata:
+  # 命名空间的名字，同一个命名空间只支持一个集群
   name: rook-ceph
   namespace: rook-ceph # namespace:cluster
 spec:
@@ -25,11 +26,12 @@ spec:
     # Whether to allow unsupported versions of Ceph. Currently `nautilus` and `octopus` are supported.
     # Future versions such as `pacific` would require this to be set to `true`.
     # Do not set to true in production.
+    # 是否允许不支持的ceph版本
     allowUnsupported: false
   # The path on the host where configuration files will be persisted. Must be specified.
   # Important: if you reinstall the cluster, make sure you delete this directory from each host or else the mons will fail to start on the new cluster.
   # In Minikube, the '/data' directory is configured to persist across reboots. Use "/data/rook" in Minikube environment.
-  # 主机有效目录
+  # 指定rook数据在节点的保存路径
   dataDirHostPath: /var/lib/rook
   # Whether or not upgrade should continue even if a check fails
   # This means Ceph's status could be degraded and we don't recommend upgrading but you might decide otherwise
@@ -44,11 +46,13 @@ spec:
   # continue with the upgrade of an OSD even if its not ok to stop after the timeout. This timeout won't be applied if `skipUpgradeChecks` is `true`.
   # The default wait timeout is 10 minutes.
   waitTimeoutForHealthyOSDInMinutes: 10
+  # 从1.5开始，mon的数量必须是奇数
   mon:
     # Set the number of mons to be started. Must be an odd number, and is generally recommended to be 3.
     count: 3
     # The mons should be on unique nodes. For production, at least 3 nodes are recommended for this reason.
     # Mons should only be allowed on the same node for test environments where data loss is acceptable.
+    # 是否允许在单个节点上部署多个mon pod
     allowMultiplePerNode: false
   mgr:
     modules:
@@ -57,15 +61,17 @@ spec:
     - name: pg_autoscaler
       enabled: true
   # enable the ceph dashboard for viewing cluster status
+  # 开启dashboard，禁用ssl，修改一下dashboard的端口和协议(默认采用8433端口和自签证书的ssl，改为http协议)
   dashboard:
     enabled: true
     # serve the dashboard under a subpath (useful when you are accessing the dashboard via a reverse proxy)
     # urlPrefix: /ceph-dashboard
     # serve the dashboard at the given port.
-    # port: 8443
+    port: 7000
     # serve the dashboard using SSL
-    ssl: true
+    ssl: false
   # enable prometheus alerting for cluster
+  # 开启prometheusRule
   monitoring:
     # requires Prometheus to be pre-installed
     enabled: false
@@ -74,6 +80,7 @@ spec:
     # If you have a single rook-ceph cluster, set the rulesNamespace to the same namespace as the cluster or keep it empty.
     # If you have multiple rook-ceph clusters in the same k8s cluster, choose the same namespace (ideally, namespace with prometheus
     # deployed) to set rulesNamespace for all the clusters. Otherwise, you will get duplicate alerts with multiple alert definitions.
+    # 部署PrometheusRule的命名空间，默认此CR所在命名空间
     rulesNamespace: rook-ceph
   network:
     # enable host networking
@@ -135,12 +142,12 @@ spec:
             - key: role
               operator: In
               values:
-              - storage-node
+              - storage
       podAffinity:
       podAntiAffinity:
       topologySpreadConstraints:
       tolerations:
-      - key: storage-node
+      - key: node-role.kubernetes.io/storage-node
         operator: Exists
 # The above placement information can also be specified for mon, osd, and mgr components
 #    mon:
@@ -189,9 +196,10 @@ spec:
 #    mon: rook-ceph-mon-priority-class
 #    osd: rook-ceph-osd-priority-class
 #    mgr: rook-ceph-mgr-priority-class
+  # 存储的设置，默认都是true，意思是会把集群所有node的设备清空初始化
   storage: # cluster level storage configuration and selection
-    useAllNodes: true
-    useAllDevices: true
+    useAllNodes: false  #关闭使用所有Node
+    useAllDevices: false #关闭使用所有设备
     #deviceFilter:
     config:
       # crushRoot: "custom-root" # specify a non-default root label for the CRUSH map
@@ -202,16 +210,26 @@ spec:
       # encryptedDevice: "true" # the default value for this option is "false"
 # Individual nodes and their config can be specified as well, but 'useAllNodes' above must be set to false. Then, only the named
 # nodes below will be used as storage resources.  Each node's 'name' field should match their 'kubernetes.io/hostname' label.
-#    nodes:
-#    - name: "172.17.4.201"
-#      devices: # specific devices to use for storage can be specified for each node
-#      - name: "sdb"
-#      - name: "nvme01" # multiple osds can be created on high performance devices
-#        config:
+    nodes:
+    - name: "k8s-worker-node1"
+      devices: # specific devices to use for storage can be specified for each node
+      - name: "xvde"
+        config:
+          storeType: bluestore
+    - name: "k8s-worker-node2"
+      devices: # specific devices to use for storage can be specified for each node
+      - name: "xvde"
+        config:
+          storeType: bluestore
+    - name: "k8s-worker-node3"
+      devices: # specific devices to use for storage can be specified for each node
+      - name: "xvde"
+        config:
+          storeType: bluestore
+
 #          osdsPerDevice: "5"
 #      - name: "/dev/disk/by-id/ata-ST4000DM004-XXXX" # devices can be specified using full udev paths
-#      config: # configuration can be specified at the node level which overrides the cluster level config
-#        storeType: filestore
+#      config: # configuration can be specified at the node level which overrides the cluster level config   
 #    - name: "172.17.4.301"
 #      deviceFilter: "^sd."
   # The section for configuring management of daemon disruptions during upgrade or fencing.
