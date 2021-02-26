@@ -1,0 +1,10 @@
+# 定义一个块存储池
+apiVersion: ceph.rook.io/v1
+kind: CephBlockPool
+metadata:
+  name: k8s-ceph-pool
+  namespace: rook-ceph
+spec:
+  failureDomain: host  # 数据块的故障域: 值为host时，每个数据块将放置在不同的主机上;值为osd时，每个数据块将放置在不同的osd上
+  replicated:
+    size: 3   # 池中数据
