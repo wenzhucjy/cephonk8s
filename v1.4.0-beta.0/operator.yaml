@@ -46,7 +46,7 @@ data:
   # of the CSI driver to something other than what is officially supported, change
   # these images to the desired release of the CSI driver.
   # 修改csi镜像为quay.wenzhu.workers.dev、k8sgcr.wenzhu.workers.dev，加速部署时间
-  ROOK_CSI_CEPH_IMAGE: "quay.wenzhu.workers.devio/cephcsi/cephcsi:v3.0.0"
+  ROOK_CSI_CEPH_IMAGE: "quay.wenzhu.workers.dev/cephcsi/cephcsi:v3.0.0"
   ROOK_CSI_REGISTRAR_IMAGE: "quay.wenzhu.workers.dev/k8scsi/csi-node-driver-registrar:v1.2.0"
   ROOK_CSI_RESIZER_IMAGE: "quay.wenzhu.workers.dev/k8scsi/csi-resizer:v0.4.0"
   ROOK_CSI_PROVISIONER_IMAGE: "quay.wenzhu.workers.dev/k8scsi/csi-provisioner:v1.6.0"
@@ -70,7 +70,7 @@ data:
   # ROOK_CSI_KUBELET_DIR_PATH: "/var/lib/kubelet"
 
   # (Optional) Ceph Provisioner NodeAffinity.
-  CSI_PROVISIONER_NODE_AFFINITY: "nodeType=node"
+  # CSI_PROVISIONER_NODE_AFFINITY: "role=storage-node; storage=rook, ceph"
   # (Optional) CEPH CSI provisioner tolerations list. Put here list of taints you want to tolerate in YAML format.
   # CSI provisioner would be best to start on the same nodes as other ceph daemons.
   CSI_PROVISIONER_TOLERATIONS: |
@@ -172,74 +172,74 @@ data:
   #        cpu: 100m
   # (Optional) CEPH CSI CephFS provisioner resource requirement list, Put here list of resource
   # requests and limits you want to apply for provisioner pod
-  CSI_CEPHFS_PROVISIONER_RESOURCE: |
-    - name : csi-provisioner
-      resource:
-        requests:
-          memory: 128Mi
-          cpu: 100m
-        limits:
-          memory: 512Mi
-          cpu: 500m
-    - name : csi-resizer
-      resource:
-        requests:
-          memory: 128Mi
-          cpu: 100m
-        limits:
-          memory: 512Mi
-          cpu: 500m
-    - name : csi-attacher
-      resource:
-        requests:
-          memory: 128Mi
-          cpu: 100m
-        limits:
-          memory: 256Mi
-          cpu: 500m
-    - name : csi-cephfsplugin
-      resource:
-        requests:
-          memory: 128Mi
-          cpu: 100m
-        limits:
-          memory: 2Gi
-          cpu: 1000m
-    - name : liveness-prometheus
-      resource:
-        requests:
-          memory: 128Mi
-          cpu: 50m
-        limits:
-          memory: 256Mi
-          cpu: 100m
+  # CSI_CEPHFS_PROVISIONER_RESOURCE: |
+  #  - name : csi-provisioner
+  #    resource:
+  #      requests:
+  #        memory: 128Mi
+  #        cpu: 100m
+  #      limits:
+  #        memory: 256Mi
+  #        cpu: 200m
+  #  - name : csi-resizer
+  #    resource:
+  #      requests:
+  #        memory: 128Mi
+  #        cpu: 100m
+  #      limits:
+  #        memory: 256Mi
+  #        cpu: 200m
+  #  - name : csi-attacher
+  #    resource:
+  #      requests:
+  #        memory: 128Mi
+  #        cpu: 100m
+  #      limits:
+  #        memory: 256Mi
+  #        cpu: 200m
+  #  - name : csi-cephfsplugin
+  #    resource:
+  #      requests:
+  #        memory: 512Mi
+  #        cpu: 250m
+  #      limits:
+  #        memory: 1Gi
+  #        cpu: 500m
+  #  - name : liveness-prometheus
+  #    resource:
+  #      requests:
+  #        memory: 128Mi
+  #        cpu: 50m
+  #      limits:
+  #        memory: 256Mi
+  #        cpu: 100m
   # (Optional) CEPH CSI CephFS plugin resource requirement list, Put here list of resource
   # requests and limits you want to apply for plugin pod
-  CSI_CEPHFS_PLUGIN_RESOURCE: |
-    - name : driver-registrar
-      resource:
-        requests:
-          memory: 128Mi
-          cpu: 50m
-        limits:
-          memory: 256Mi
-          cpu: 100m
-    - name : csi-cephfsplugin
-      resource:
-        requests:
-          memory: 512Mi
-          cpu: 250m
-        limits:
-          memory: 1Gi
-          cpu: 500m
-    - name : liveness-prometheus
-      resource:
-        requests:
-          memory: 128Mi
-          cpu: 50m
-        limits:
-          memory: 256Mi
-          cpu: 100m
+  # CSI_CEPHFS_PLUGIN_RESOURCE: |
+  #  - name : driver-registrar
+  #    resource:
+  #      requests:
+  #        memory: 128Mi
+  #        cpu: 50m
+  #      limits:
+  #        memory: 256Mi
+  #        cpu: 100m
+  #  - name : csi-cephfsplugin
+  #    resource:
+  #      requests:
+  #        memory: 512Mi
+  #        cpu: 250m
+  #      limits:
+  #        memory: 1Gi
+  #        cpu: 500m
+  #  - name : liveness-prometheus
+  #    resource:
+  #      requests:
+  #        memory: 128Mi
+  #        cpu: 50m
+  #      limits:
+  #        memory: 256Mi
+  #        cpu: 100m
 
   # Configure CSI CSI Ceph FS grpc and liveness metrics port
   # CSI_CEPHFS_GRPC_METRICS_PORT: "9091"
@@ -273,7 +273,7 @@ spec:
       serviceAccountName: rook-ceph-system
       containers:
       - name: rook-ceph-operator
-        image: rook/ceph:v1.4.0-beta.0
+        image: registry.cn-shanghai.aliyuncs.com/jpq_kubernetes/rookceph:v1.4.0-beta.0
         args: ["ceph", "operator"]
         volumeMounts:
         - mountPath: /var/lib/rook
@@ -301,6 +301,9 @@ spec:
             - effect: NoSchedule
               key: node-role.kubernetes.io/storage-node
               operator: Exists
+        #     - effect: NoExecute
+        #       key: node-role.kubernetes.io/etcd
+        #       operator: Exists
         # (Optional) Rook Agent priority class name to set on the pod(s)
         # - name: AGENT_PRIORITY_CLASS_NAME
         #   value: "<PriorityClassName>"
@@ -336,7 +339,6 @@ spec:
             - effect: NoSchedule
               key: node-role.kubernetes.io/storage-node
               operator: Exists
-            - effect: NoExecute
         #     - effect: NoExecute
         #       key: node-role.kubernetes.io/etcd
         #       operator: Exists
@@ -344,7 +346,6 @@ spec:
         # - name: DISCOVER_PRIORITY_CLASS_NAME
         #   value: "<PriorityClassName>"
         # (Optional) Discover Agent NodeAffinity.
-         # 指定节点做存储
         - name: DISCOVER_AGENT_NODE_AFFINITY
           value: "role=storage"
         # Allow rook to create multiple file systems. Note: This is considered
@@ -398,9 +399,9 @@ spec:
 
         # Whether to start the discovery daemon to watch for raw storage devices on nodes in the cluster.
         # This daemon does not need to run if you are only going to create your OSDs based on StorageClassDeviceSets with PVCs.
-         # 是否开启设备自动发现，默认true
+        # 是否开启设备自动发现
         - name: ROOK_ENABLE_DISCOVERY_DAEMON
-          value: "false"
+          value: "true"
 
         # Time to wait until the node controller will move Rook pods to other
         # nodes after detecting an unreachable node.
@@ -438,20 +439,6 @@ spec:
 
       # Uncomment it to run rook operator on the host network
       #hostNetwork: true
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: nodeType
-                operator: In
-                values:
-                - node
-      tolerations:
-      - key: "taintType"
-        operator: "Equal"
-        value: "node"
-        effect: "NoSchedule"
       volumes:
       - name: rook-config
         emptyDir: {}
